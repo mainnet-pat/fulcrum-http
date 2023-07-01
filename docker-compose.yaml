@@ -1,0 +1,7 @@
+version: '3'
+services:
+  fulcrum-http:
+    build: .
+    restart: always
+    ports:
+      - 127.0.0.1:8888:8000
