@@ -11,7 +11,7 @@ User can instruct the wrapper to connect to the fulcrum instance of their choice
 Example request:
 
 ```bash
-curl -X POST -d '{"id":1, "jsonrpc":"2.0","method":"blockchain.headers.get_tip", "params": []}' -H "Content-Type: application/json" -H "server: wss://electrum.imaginary.cash:50004" localhost:8000
+curl -X POST -d '{"id":1, "jsonrpc":"2.0","method":"blockchain.headers.get_tip", "params": []}' -H "Content-Type: application/json" -H "server: wss://electrum.imaginary.cash:50004" https://fulcrum-http.pat.mn
 ```
 
 Response:
