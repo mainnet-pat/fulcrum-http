@@ -4,6 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
+    "@chaingraph/bitcore-p2p-cash": "^9.0.4",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "electrum-cash": "^3.0.2",
