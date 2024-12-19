@@ -26,6 +26,7 @@ export const SetupP2p = () => {
     version: node.version,
   };
   const peer = new Peer(peerConfig);
+  peer.setMaxListeners(1e10);
 
   if (chaingraphLogFirehose) {
     peer.on('*', (message, eventName) => {

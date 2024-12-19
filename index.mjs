@@ -103,9 +103,8 @@ const getBlockByHash = async (blockHash, verbosity, height) => {
       }
 
       resolve(null);
-      p2p.off('block', handler);
     };
-    p2p.on('block', handler);
+    p2p.once('block', handler);
     p2p.sendMessage(p2p.messages.GetData.forBlock(blockHash));
   });
 }
