@@ -3,14 +3,14 @@ import cors from "cors";
 import compression from "compression";
 import { ElectrumClient } from "electrum-cash";
 import { URL } from "url";
-import bitcore from "@chaingraph/bitcore-lib-cash";
+import { Hash } from "bitcoin-minimal/lib/utils/index.js";
 
 import { SetupP2p } from "./p2p.mjs";
 const p2p = SetupP2p();
 
 const getBlockByHeight = async (blockHeight, verbosity) => {
   const { height, hex } = await request(defaultWs, "blockchain.header.get", [blockHeight])
-  const hash = bitcore.crypto.Hash.sha256sha256(Buffer.from(hex, "hex"));
+  const hash = Hash.sha256sha256(Buffer.from(hex, "hex")).reverse();
 
   return await getBlockByHash(hash, verbosity, height);
 }
@@ -67,46 +67,48 @@ const request = async (server, method, params) => {
 }
 
 const getBlockByHash = async (blockHash, verbosity, height) => {
-  return await new Promise((resolve) => {
-    const handler = async (message) => {
-      if (!verbosity || Number(verbosity) === 0) {
-        const block = message.block.toBuffer().toString("hex");
-        resolve(block);
-      } else if (Number(verbosity === 1) || Number(verbosity === 1.5)) {
-        const blockBuffer = message.block.toBuffer();
-        height = height ?? await getBlockHeightByHash(blockHash);
-        const block = {
-          hash: message.block._getHash().reverse().toString("hex"),
-          confirmations: -1,
-          size: blockBuffer.length,
-          height: height,
-          version: message.block.header.version,
-          versionHex: null,
-          merkleroot: message.block.header.merkleRoot.reverse().toString("hex"),
-          tx: [],
-          time: message.block.header.time,
-          mediantime: null,
-          nonce: message.block.header.nonce,
-          bits: null,
-          difficulty: message.block.header.getDifficulty(),
-          nTx: message.block.transactions.length,
-          previousblockhash: message.block.header.prevHash.reverse().toString("hex"),
-          nextblockhash: null
-        }
+  const block = await p2p.getBlock(blockHash);
 
-        if (Number(verbosity === 1)) {
-          block.tx = message.block.getTransactionHashes().map(buffer => buffer.reverse().toString("hex"));
-        } else {
-          block.tx = message.block.transactions.map(tx => tx.uncheckedSerialize().toString("hex"));
-        }
-        resolve(block);
+  if (!verbosity || Number(verbosity) === 0) {
+    const result = block.toBuffer().toString("hex");
+    return result;
+  } else if (Number(verbosity === 1) || Number(verbosity === 1.5)) {
+    height = height ?? (() => {
+      try {
+        return block.getHeight();
+      } catch (e) {
+        return undefined;
       }
+     })() ?? await getBlockHeightByHash(blockHash);
+    const result = {
+      hash: block.getHash().toString("hex"),
+      confirmations: -1,
+      size: block.size,
+      height: height,
+      version: block.header.version.slice().readUint32BE(0),
+      versionHex: block.header.version.toString("hex"),
+      merkleroot: block.header.merkleRoot.toString("hex"),
+      tx: [],
+      time: block.header.time,
+      mediantime: 0,
+      nonce: block.header.nonce,
+      bits: block.header.bits.toString("hex"),
+      difficulty: 0,
+      nTx: block.txCount,
+      previousblockhash: block.header.prevHash.toString("hex"),
+      nextblockhash: "",
+    }
 
-      resolve(null);
-    };
-    p2p.once('block', handler);
-    p2p.sendMessage(p2p.messages.GetData.forBlock(blockHash));
-  });
+    const rawTransactions = block.getRawTransactions();
+    if (Number(verbosity === 1)) {
+      result.tx = rawTransactions.map(tx => Hash.sha256sha256(tx).reverse().toString("hex"));
+    } else {
+      result.tx = rawTransactions.map(tx => tx.toString("hex"));
+    }
+    return result;
+  }
+
+  return null;
 }
 
 const app = express();
